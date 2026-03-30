@@ -7,27 +7,32 @@
 
 ## Overview
 
-The Player Character system is the 3rd-person character controller that provides
-the player's physical presence in the game world. It handles movement, an
-over-the-shoulder camera, and serves as the anchor point for the Interaction and
-Costume systems. The character communicates through text-only dialogue with
-costume-specific personality, and expressive animations. There is no combat,
-health, death, or platforming — the controller is focused entirely on exploration,
-investigation, and comedic expression. Without this system, the player has no way
-to exist in or move through the Karneval world.
+The Player Character system is the first-person character controller that provides
+the player's physical presence in the game world. It handles movement, a
+first-person camera at head height, and serves as the anchor point for the
+Interaction and Costume systems. The character communicates through text-only
+dialogue with costume-specific personality. There is no combat, health, death, or
+platforming — the controller is focused entirely on exploration, investigation,
+and comedic expression. Without this system, the player has no way to exist in or
+move through the Karneval world.
+
+> **Design Note**: Originally designed as over-the-shoulder 3rd person. Changed to
+> first person after prototype testing (2026-03-30) — first person felt more
+> immersive and natural for the investigation gameplay.
 
 ## Player Fantasy
 
 > **"I'm this ridiculous character now, and everything I do feels like being in costume."**
 
-The player should feel like they're *inhabiting* their costume — not just wearing
-it. When the Pirate walks, there's a swagger. When the Clown moves, there's a
-bounce. The character controller isn't just functional transportation; it's the
-first layer of comedy. Moving through the Karneval town should feel like wandering
-through a festival — relaxed, curious, and slightly chaotic. The controller serves
-the **Jeck sein** pillar by making even basic movement entertaining, and the
-**Zosamme** pillar by ensuring multiple characters sharing the screen creates
-visual comedy through contrasting movement styles.
+The player should feel like they're *inside* their costume — seeing the world
+through the Pirate's eyes, the Clown's perspective. First person makes the
+investigation feel personal: leaning in to read a sign, looking up at a building,
+peering around a corner. Costume identity comes through in the hands/arms visible
+at screen edges, costume-specific sounds, and how NPCs react to you. Moving
+through the Karneval town should feel like wandering through a festival — relaxed,
+curious, and slightly chaotic. The controller serves the **Jeck sein** pillar by
+making exploration feel playful, and the **Zosamme** pillar by ensuring
+multiplayer feels like being at the party together.
 
 ## Detailed Design
 
@@ -42,13 +47,14 @@ visual comedy through contrasting movement styles.
    piles). No fall damage.
 4. **Auto-step**: Character automatically steps up small elevation changes (stairs,
    curbs) without needing to hop.
-5. **Camera**: Over-the-shoulder, right-side offset. Mouse/right-stick orbits
-   around the character. Camera collision prevents clipping through walls.
-6. **Interaction facing**: When the player initiates an interaction (NPC dialogue,
-   item pickup), the character smoothly rotates to face the target.
-7. **Costume animations**: Each costume has a unique idle, walk, and run animation
-   set that reflects its personality (Pirate swagger, Clown bounce, etc.). Hop
-   animation is shared but with costume-specific landing effects.
+5. **Camera**: First-person at head height (~1.6m). Mouse/right-stick controls
+   look direction. Standard FPS-style mouse look (captured cursor).
+6. **Interaction facing**: The player looks at targets to select them. No
+   automatic character rotation needed — camera direction IS facing direction.
+7. **Costume visibility**: In first person, costume is visible via hands/arms at
+   screen edges (viewmodel) and in the player's shadow. Other players see the
+   full costume model in multiplayer. Costume identity is primarily conveyed
+   through dialogue personality, NPC reactions, and costume-specific sounds.
 
 ### States and Transitions
 
@@ -90,14 +96,14 @@ Hop Duration = 2 * sqrt(2 * HOP_HEIGHT / GRAVITY)
 Auto-Step Height = STEP_HEIGHT (m)
   Default: 0.3 m | Range: 0.1–0.5
 
-Camera Distance = CAM_DISTANCE (m)
-  Default: 3.0 m | Range: 2.0–5.0
+Camera Height = CAM_HEIGHT (m)
+  Default: 1.6 m | Range: 1.4–1.8
 
-Camera Shoulder Offset = CAM_OFFSET (m)
-  Default: 0.5 m right | Range: 0.0–1.0
+Mouse Sensitivity = MOUSE_SENSITIVITY
+  Default: 0.002 | Range: 0.001–0.005
 
-Interaction Facing Rotation Speed = FACE_SPEED (deg/s)
-  Default: 360 deg/s | Range: 180–720
+Vertical Look Limit = LOOK_LIMIT (rad)
+  Default: PI/4 (~45 deg up/down) | Range: PI/6–PI/3
 ```
 
 ## Edge Cases
@@ -105,7 +111,7 @@ Interaction Facing Rotation Speed = FACE_SPEED (deg/s)
 | Edge Case | Resolution |
 |-----------|-----------|
 | **Player hops off a ledge** | Character falls with gravity but takes no damage. Lands with a comedic stumble animation. No invisible walls — if the player finds a way off the map, they respawn at the nearest valid position. |
-| **Camera clips through wall** | Camera collision pushes camera closer to the character (reducing CAM_DISTANCE dynamically). Restores to default when obstruction clears. |
+| **Camera inside wall/object** | First-person camera is at head height inside the collision capsule — clipping is unlikely. If the player is pushed into geometry, the CharacterBody3D physics prevents it. |
 | **Player interacts while hopping** | Interaction is queued and executes on landing. Character does not interact mid-air. |
 | **Player runs into NPC** | No physics collision with NPCs — characters pass through each other. NPCs play a startled reaction animation. Avoids griefing in multiplayer. |
 | **Multiple players try to interact with same object** | Interaction System handles this (not Player Character). Player Character just sends the interaction request. |
@@ -131,13 +137,9 @@ Interaction Facing Rotation Speed = FACE_SPEED (deg/s)
 | `RUN_SPEED` | 6.0 m/s | 4.0–8.0 | Traversal speed | Running feels pointless | Hard to control, misses details |
 | `HOP_HEIGHT` | 0.5 m | 0.3–1.0 | Expressiveness, obstacle clearance | Can't clear curbs | Feels like platforming |
 | `STEP_HEIGHT` | 0.3 m | 0.1–0.5 | Stair/curb navigation | Gets stuck on small bumps | Walks up things that should block |
-| `CAM_DISTANCE` | 3.0 m | 2.0–5.0 | Framing, spatial awareness | Too close, claustrophobic | Too far, loses costume detail |
-| `CAM_OFFSET` | 0.5 m | 0.0–1.0 | Shoulder offset | Centered (less cinematic) | Character blocks too much view |
-| `CAM_SENSITIVITY` | 1.0 | 0.3–3.0 | Camera orbit speed | Sluggish camera | Disorienting |
-| `FACE_SPEED` | 360 deg/s | 180–720 | Interaction turn speed | Slow, noticeable delay | Instant, robotic snap |
-
-**Knob interactions**: `WALK_SPEED` and `CAM_DISTANCE` are linked — if walk speed
-increases, camera distance may need to increase to maintain comfortable framing.
+| `CAM_HEIGHT` | 1.6 m | 1.4–1.8 | Eye height | Too low, child perspective | Too high, floating |
+| `MOUSE_SENSITIVITY` | 0.002 | 0.001–0.005 | Look speed | Sluggish | Disorienting |
+| `LOOK_LIMIT` | PI/4 | PI/6–PI/3 | Vertical look range | Can barely look up/down | Can look straight up (disorienting) |
 
 ## Acceptance Criteria
 
@@ -153,19 +155,19 @@ increases, camera distance may need to increase to maintain comfortable framing.
 - [ ] Interaction input during hop is queued and executes on landing
 
 **Camera:**
-- [ ] Over-the-shoulder camera follows character with right-side offset
-- [ ] Camera orbits smoothly with mouse/right-stick
-- [ ] Camera does not clip through walls (collision pushes camera closer)
-- [ ] Camera restores to default distance when obstruction clears
+- [ ] First-person camera at head height (~1.6m)
+- [ ] Mouse look is smooth and responsive
+- [ ] Vertical look is clamped to ~45 degrees up/down
+- [ ] Camera stays inside collision capsule (no wall clipping)
 
 **Interactions:**
-- [ ] Character smoothly rotates to face interaction target when interaction begins
+- [ ] Player looks at target to select it (camera direction = facing direction)
 - [ ] Character movement locks during Interacting state
 - [ ] Character returns to Idle when interaction ends
 
 **Costumes:**
-- [ ] Each costume displays its unique idle, walk, and run animations
-- [ ] Fallback animations work when costume-specific animations are missing
+- [ ] Costume viewmodel (hands/arms) visible at screen edges
+- [ ] Other players see full costume model in multiplayer
 - [ ] Characters pass through NPCs without collision (NPC plays reaction)
 
 **Multiplayer:**
