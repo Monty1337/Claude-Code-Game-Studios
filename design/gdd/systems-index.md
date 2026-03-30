@@ -123,12 +123,12 @@ Design GDDs in this order (dependency + priority combined):
 | 2 | World/Environment | Foundation | MVP | Designed |
 | 3 | Interaction System | Core | MVP | Designed |
 | 4 | Costume System | Core | MVP | Designed |
-| 5 | NPC System | Core | MVP | Not Started |
-| 6 | Item System | Feature | MVP | Not Started |
-| 7 | Dialogue System | Feature | MVP | Not Started |
-| 8 | Puzzle System | Feature | MVP | Not Started |
-| 9 | UI System | Foundation | MVP | Not Started |
-| 10 | Feedback System | Feature | MVP | Not Started |
+| 5 | NPC System | Core | MVP | Designed |
+| 6 | Item System | Feature | MVP | Designed |
+| 7 | Dialogue System | Feature | MVP | Designed |
+| 8 | Puzzle System | Feature | MVP | Designed |
+| 9 | UI System | Foundation | MVP | Designed |
+| 10 | Feedback System | Feature | MVP | Designed |
 | 11 | Mini-Task System | Progression | Vertical Slice | Not Started |
 | 12 | Hint System | Progression | Vertical Slice | Not Started |
 | 13 | Audio System | Foundation | Vertical Slice | Not Started |
@@ -144,7 +144,7 @@ Design GDDs in this order (dependency + priority combined):
 
 | Milestone | Systems | Designed | Remaining |
 |-----------|---------|----------|-----------|
-| MVP | 10 | 4 | 6 |
+| MVP | 10 | 10 | 0 |
 | Vertical Slice | 4 | 0 | 4 |
 | Alpha | 4 | 0 | 4 |
-| **Total** | **18** | **4** | **14** |
+| **Total** | **18** | **10** | **8** |
