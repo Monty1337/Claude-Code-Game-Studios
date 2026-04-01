@@ -20,6 +20,9 @@ func _ready() -> void:
 	var feedback := FeedbackController.new()
 	add_child(feedback)
 
+	# Listen for chapter complete
+	EventBus.chapter_completed.connect(_on_chapter_completed)
+
 	# Show costume selection first
 	_show_costume_selection()
 
@@ -97,18 +100,6 @@ func _build_environment() -> void:
 	# Benches
 	_box(Vector3(-5, 0.35, 5), Vector3(2.5, 0.7, 0.6), Color(0.5, 0.35, 0.2))
 	_box(Vector3(5, 0.35, 5), Vector3(2.5, 0.7, 0.6), Color(0.5, 0.35, 0.2))
-
-	# Navigation mesh for NPC pathfinding
-	var nav_region := NavigationRegion3D.new()
-	var nav_mesh := NavigationMesh.new()
-	nav_mesh.agent_radius = 0.4
-	nav_mesh.agent_height = 1.8
-	nav_mesh.cell_size = 0.25
-	nav_mesh.cell_height = 0.1
-	nav_region.navigation_mesh = nav_mesh
-	add_child(nav_region)
-	# Bake after scene is built (deferred so all geometry exists)
-	nav_region.call_deferred("bake_navigation_mesh")
 
 	# Steps near buildings
 	_box(Vector3(-10, 0.15, -11.5), Vector3(4, 0.3, 1), Color(0.65, 0.6, 0.55))
@@ -245,7 +236,7 @@ func _add_simple_npc(pos: Vector3, id: StringName, npc_name: String,
 	add_child(npc)
 
 
-func _add_npc_visuals(npc: StaticBody3D, body_color: Color) -> void:
+func _add_npc_visuals(npc: Node3D, body_color: Color) -> void:
 	var body := MeshInstance3D.new()
 	var capsule := CapsuleMesh.new()
 	capsule.radius = 0.3
@@ -362,32 +353,27 @@ func _build_puzzle_system() -> void:
 	p2.steps = [p2_step]
 	_puzzle_controller.puzzles.append(p2)
 
-	# Puzzle 3: Give the Narrenkappe to the Büttenredner (requires talking first)
+	# Puzzle 3: Bring the Narrenkappe to the podium
 	var p3 := PuzzleResource.new()
 	p3.puzzle_id = &"buettenrede_puzzle"
 	p3.display_name = "Die verstummte Büttenrede"
 	p3.chapter = 1
-	p3.completion_message = "The Büttenredner puts on the Kappe and starts his Rede!\n'Alaaf! Dreimol Alaaf!'\nThe last piece of the curse shatters!"
 	p3.reward_type = PuzzleResource.RewardType.CHAPTER_COMPLETE
-	var p3_step1 := PuzzleStep.new()
-	p3_step1.step_type = PuzzleStep.StepType.TALK_TO_NPC
-	p3_step1.npc_id = &"buettenredner"
-	p3_step1.dialogue_flag = &"buettenredner_needs_kappe"
-	p3_step1.description = "Talk to the Büttenredner to learn what he needs"
-	var p3_step2 := PuzzleStep.new()
-	p3_step2.step_type = PuzzleStep.StepType.USE_ITEM
-	p3_step2.item_id = &"narrenkappe"
-	p3_step2.target_id = &"buettenredner_podium"
-	p3_step2.description = "Bring the Narrenkappe to the Büttenredner's podium"
-	p3.steps = [p3_step1, p3_step2]
+	p3.completion_message = "The Büttenredner puts on the Kappe and starts his Rede!\n'Alaaf! Dreimol Alaaf!'\nThe last piece of the curse shatters!"
+	var p3_step := PuzzleStep.new()
+	p3_step.step_type = PuzzleStep.StepType.USE_ITEM
+	p3_step.item_id = &"narrenkappe"
+	p3_step.target_id = &"buettenredner_podium"
+	p3_step.description = "Bring the Narrenkappe to the Büttenredner's podium"
+	p3.steps = [p3_step]
 	_puzzle_controller.puzzles.append(p3)
 
 	add_child(_puzzle_controller)
 
 	# Hint manager
 	var hints := HintManager.new()
-	hints.hint_delay = 120.0  # 2 min for first hint
-	hints.hint_repeat = 90.0  # 1.5 min between hints
+	hints.hint_delay = 30.0  # 30s for first hint (short for testing, increase for release)
+	hints.hint_repeat = 30.0  # 30s between hints
 	hints.puzzle_hints = {
 		&"orden_puzzle": [
 			"I heard someone dropped something shiny near the blue building...",
@@ -473,6 +459,8 @@ func _make_koebes_dialogue() -> DialogueTree:
 	n0.costume_variants = {
 		&"boastful": "Arrr! Another cursed soul! I can't stop carrying Kölsch, ye landlubber!",
 		&"mischievous": "Alaaf! *honk* Hey, you're stuck too? I can't stop carrying Kölsch!",
+		&"chivalrous": "Alaaf! A noble knight! Pray tell, I cannot cease\nserving Kölsch to these poor souls!",
+		&"theatrical": "Alaaf! *gasps dramatically* The spirits compel me\nto carry Kölsch for all eternity!",
 	}
 	tree.nodes.append(n0)
 
@@ -487,6 +475,8 @@ func _make_koebes_dialogue() -> DialogueTree:
 	n2.costume_variants = {
 		&"boastful": "Arrr, the Prinz lost his golden Orden!\nIt be near the blue Büdchen, savvy?\nPlace it on the Narrenstatue, ye scallywag!",
 		&"mischievous": "Psst! *leans in* The Prinz dropped his Orden!\nI saw it roll toward the blue Büdchen.\nTry sticking it on the Narrenstatue! *wink*",
+		&"chivalrous": "Good knight, the Prinz hath lost his golden Orden!\nSeek it near the blue Büdchen yonder.\nPlace it upon the Narrenstatue — 'tis our only hope!",
+		&"theatrical": "The Orden... *waves hands mystically*\nIt fell near the blue Büdchen, drawn by dark forces.\nThe Narrenstatue hungers for it... place it there!",
 	}
 	tree.nodes.append(n2)
 
@@ -508,12 +498,18 @@ func _make_blumenmarie_dialogue() -> DialogueTree:
 	n0.costume_variants = {
 		&"boastful": "*sniff* Ahoy, Pirat! My Strüßjer are all gone!\nMy stand is as empty as the seven seas!",
 		&"mischievous": "*sniff* Oh, a Clown... I could use a laugh.\nAll my Strüßjer are gone! My stand is bare!",
+		&"chivalrous": "*sniff* Oh, noble Ritter! A damsel in distress!\nAll my Strüßjer have vanished! My stand lies barren!",
+		&"theatrical": "*sniff* Hexe! Can you conjure flowers?\nMy Strüßjer are gone... all gone... *dramatic sob*",
 	}
 	tree.nodes.append(n0)
 
 	var n1 := DialogueData.new()
 	n1.speaker_name = "Die Blumenmarie"
 	n1.default_text = "I think some Strüßjer blew away in the wind.\nThey might have landed near the back walls.\nIf you find some, please bring them back!"
+	n1.costume_variants = {
+		&"chivalrous": "The wind carried my Strüßjer toward the back walls.\nWould you undertake this quest, brave knight?\nReturn them to my stand and I shall be forever grateful!",
+		&"theatrical": "The cursed wind stole them... toward the back walls.\n*whispers* The flowers call to you, Hexe.\nBring them to my stand... before it's too late!",
+	}
 	tree.nodes.append(n1)
 
 	return tree
@@ -529,8 +525,9 @@ func _make_buettenredner_dialogue() -> DialogueTree:
 	n0.costume_variants = {
 		&"boastful": "Arrr, help a fellow performer!\nI can't give me Büttenrede without me Narrenkappe!",
 		&"mischievous": "*sad trombone* I lost my Narrenkappe!\nNo Kappe, no Rede, no laughs. Help?",
+		&"chivalrous": "Hark, good knight! I am to deliver a Büttenrede,\nbut alas — my Narrenkappe is lost!\nA quest most dire!",
+		&"theatrical": "*clutches chest* The Narrenkappe... gone!\nWithout it, the Büttenrede shall remain... UNSPOKEN!\n*thunder sound effect*",
 	}
-	# This node sets the puzzle flag so the puzzle system knows we talked
 	n0.set_flag = &"buettenredner_needs_kappe"
 	n0.set_flag_value = true
 	tree.nodes.append(n0)
@@ -538,6 +535,10 @@ func _make_buettenredner_dialogue() -> DialogueTree:
 	var n1 := DialogueData.new()
 	n1.speaker_name = "Der Büttenredner"
 	n1.default_text = "I think my Narrenkappe flew off toward\nthe brown shed behind the green building.\nPlease find it and put it on my podium!"
+	n1.costume_variants = {
+		&"chivalrous": "My Narrenkappe took flight toward yon brown shed,\nbeyond the green tower! Retrieve it, noble knight,\nand lay it upon my podium!",
+		&"theatrical": "The wind carried it... *points dramatically*\n...toward the brown shed, past the green building.\nPlace it upon the podium... and the Rede shall live again!",
+	}
 	tree.nodes.append(n1)
 
 	return tree
@@ -574,3 +575,19 @@ func _build_lighting() -> void:
 	environment.adjustment_saturation = 0.4
 	env.environment = environment
 	add_child(env)
+
+
+func _on_chapter_completed(_chapter: int) -> void:
+	# Celebration sequence
+	EventBus.show_message.emit(
+		"KAPITEL 1 GESCHAFFT!\n\n" +
+		"The Altstadt is free from the curse!\n" +
+		"But the rest of the town is still trapped...\n\n" +
+		"Weiter zum Brauhaus!",
+		0.0
+	)
+	# Auto-save and transition
+	await get_tree().create_timer(5.0).timeout
+	GameState.set_chapter(2)
+	SaveManager.save_game()
+	SceneManager.load_scene("res://scenes/chapter_2.tscn")

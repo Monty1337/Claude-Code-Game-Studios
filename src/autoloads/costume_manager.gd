@@ -4,17 +4,30 @@
 extends Node
 
 ## Costume data — will be replaced by CostumeResource files later.
-## For now, hardcoded definitions for the 2 MVP costumes.
 var _costume_data: Dictionary = {
 	&"pirate": {
 		"display_name": "Der Pirat",
 		"personality_tag": &"boastful",
 		"description": "Takes everything too seriously, threatens inanimate objects.",
+		"body_color": Color(0.2, 0.15, 0.1),
 	},
 	&"clown": {
 		"display_name": "Der Clown",
 		"personality_tag": &"mischievous",
 		"description": "Physical comedy, honks at inappropriate moments.",
+		"body_color": Color(0.9, 0.2, 0.2),
+	},
+	&"knight": {
+		"display_name": "Der Ritter",
+		"personality_tag": &"chivalrous",
+		"description": "Treats every situation as a medieval quest.",
+		"body_color": Color(0.6, 0.6, 0.65),
+	},
+	&"witch": {
+		"display_name": "Die Hexe",
+		"personality_tag": &"theatrical",
+		"description": "Pronounces everything as a dark omen.",
+		"body_color": Color(0.3, 0.1, 0.4),
 	},
 }
 

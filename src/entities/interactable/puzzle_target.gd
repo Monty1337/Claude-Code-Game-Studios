@@ -30,12 +30,16 @@ func interact(player: Node) -> void:
 		return
 
 	if required_item != &"" and InventoryManager.has_item(required_item):
-		_solved = true
-		InventoryManager.remove_item(required_item)
-		EventBus.item_used.emit(required_item, target_id, true)
-		EventBus.puzzle_step_completed.emit(&"prototype_puzzle", 0)
-		EventBus.show_message.emit(success_message, 3.0)
-		_set_solved_visual()
+		# Check if any puzzle actually needs this item on this target right now
+		var puzzle_ctrl: PuzzleController = _find_puzzle_controller()
+		if puzzle_ctrl and not puzzle_ctrl.validate_item_use(required_item, target_id):
+			# Item is correct but puzzle isn't ready yet (prerequisites not met)
+			EventBus.show_message.emit("Something tells me it's not the right time for this yet...", 2.0)
+		else:
+			_solved = true
+			InventoryManager.remove_item(required_item)
+			EventBus.item_used.emit(required_item, target_id, true)
+			_set_solved_visual()
 	else:
 		EventBus.show_message.emit(wrong_message, 2.0)
 
@@ -45,6 +49,17 @@ func interact(player: Node) -> void:
 
 func is_available() -> bool:
 	return not _solved
+
+
+func _find_puzzle_controller() -> PuzzleController:
+	# Search up the tree for a PuzzleController sibling
+	var parent := get_parent()
+	while parent:
+		for child in parent.get_children():
+			if child is PuzzleController:
+				return child
+		parent = parent.get_parent()
+	return null
 
 
 func _set_solved_visual() -> void:

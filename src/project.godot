@@ -21,6 +21,7 @@ GameState="*res://autoloads/game_state.gd"
 InventoryManager="*res://autoloads/inventory_manager.gd"
 CostumeManager="*res://autoloads/costume_manager.gd"
 SceneManager="*res://autoloads/scene_manager.gd"
+SaveManager="*res://autoloads/save_manager.gd"
 
 [display]
 

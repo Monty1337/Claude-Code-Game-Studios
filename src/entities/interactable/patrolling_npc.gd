@@ -29,7 +29,6 @@ var _waiting := false
 var _wait_timer: float = 0.0
 var _in_dialogue := false
 var _dialogue_controller: DialogueController
-var _nav_agent: NavigationAgent3D
 
 # Awareness
 var _nearest_player: Node3D = null
@@ -44,12 +43,6 @@ func _ready() -> void:
 	interaction_label = "Talk to " + npc_name
 	collision_layer = 2  # Interactable
 	collision_mask = 1   # Collide with environment
-
-	# Navigation agent
-	_nav_agent = NavigationAgent3D.new()
-	_nav_agent.path_desired_distance = 0.5
-	_nav_agent.target_desired_distance = 0.5
-	add_child(_nav_agent)
 
 	# Dialogue controller
 	_dialogue_controller = DialogueController.new()
@@ -101,24 +94,24 @@ func _process_patrol(delta: float) -> void:
 		_wait_timer = max_wait_time
 		return
 
-	if _nav_agent.is_navigation_finished():
+	var target: Vector3 = waypoints[_current_waypoint]
+	var direction: Vector3 = target - global_position
+	direction.y = 0
+
+	if direction.length() < 0.5:
+		# Arrived at waypoint
 		_state = State.WAITING
 		_wait_timer = randf_range(min_wait_time, max_wait_time)
 		_advance_waypoint()
-		return
-
-	var next_pos: Vector3 = _nav_agent.get_next_path_position()
-	var direction := (next_pos - global_position)
-	direction.y = 0
-	if direction.length() > 0.1:
-		direction = direction.normalized()
-		velocity.x = direction.x * walk_speed
-		velocity.z = direction.z * walk_speed
-		# Face movement direction
-		rotation.y = lerp_angle(rotation.y, atan2(direction.x, direction.z), delta * 5.0)
-	else:
 		velocity.x = 0.0
 		velocity.z = 0.0
+		return
+
+	direction = direction.normalized()
+	velocity.x = direction.x * walk_speed
+	velocity.z = direction.z * walk_speed
+	# Face movement direction
+	rotation.y = lerp_angle(rotation.y, atan2(direction.x, direction.z), delta * 5.0)
 
 
 func _process_wait(delta: float) -> void:
@@ -134,7 +127,7 @@ func _process_aware(delta: float) -> void:
 	velocity.z = 0.0
 	# Look at player
 	if _nearest_player:
-		var dir := (_nearest_player.global_position - global_position)
+		var dir: Vector3 = _nearest_player.global_position - global_position
 		dir.y = 0
 		if dir.length() > 0.1:
 			var target_rot := atan2(dir.x, dir.z)
@@ -152,7 +145,6 @@ func _start_patrol_to_next() -> void:
 		_wait_timer = max_wait_time
 		return
 	_state = State.PATROLLING
-	_nav_agent.target_position = waypoints[_current_waypoint]
 
 
 func _advance_waypoint() -> void:
@@ -244,7 +236,7 @@ func interact(player: Node) -> void:
 	set_meta("dialogue_player", player)
 
 	# Face the player
-	var dir := (player.global_position - global_position)
+	var dir: Vector3 = player.global_position - global_position
 	dir.y = 0
 	if dir.length() > 0.1:
 		rotation.y = atan2(dir.x, dir.z)

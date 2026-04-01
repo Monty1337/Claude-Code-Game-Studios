@@ -20,7 +20,8 @@ func _ready() -> void:
 
 
 func _on_puzzle_solved(_puzzle_id: StringName) -> void:
-	# Big celebration — screen flash + confetti at player
+	if not is_inside_tree():
+		return
 	var player := _find_player()
 	if player:
 		_spawn_confetti(player.global_position + Vector3(0, 2, 0), 2.0, confetti_count * 2)
@@ -28,6 +29,8 @@ func _on_puzzle_solved(_puzzle_id: StringName) -> void:
 
 
 func _on_puzzle_step(_puzzle_id: StringName, _step: int) -> void:
+	if not is_inside_tree():
+		return
 	var player := _find_player()
 	if player:
 		_spawn_confetti(player.global_position + Vector3(0, 1.5, 0), 1.5, confetti_count)
@@ -35,16 +38,22 @@ func _on_puzzle_step(_puzzle_id: StringName, _step: int) -> void:
 
 
 func _on_item_picked_up(_item_id: StringName, _player: Node) -> void:
+	if not is_inside_tree():
+		return
 	var player := _find_player()
 	if player:
 		_spawn_sparkle(player.global_position + Vector3(0, 1, 0))
 
 
 func _on_hop_landed(_player: Node, pos: Vector3) -> void:
+	if not is_inside_tree():
+		return
 	_spawn_dust(pos)
 
 
 func _on_npc_startled(_npc_id: StringName, pos: Vector3) -> void:
+	if not is_inside_tree():
+		return
 	_spawn_sparkle(pos + Vector3(0, 1.5, 0))
 
 
@@ -144,7 +153,7 @@ func _spawn_dust(pos: Vector3) -> void:
 func _add_timed_particles(particles: GPUParticles3D, cleanup_time: float) -> void:
 	# Enforce particle budget
 	while _active_particles.size() >= max_concurrent_particles:
-		var oldest := _active_particles.pop_front()
+		var oldest: GPUParticles3D = _active_particles.pop_front()
 		if is_instance_valid(oldest):
 			oldest.queue_free()
 
@@ -179,7 +188,7 @@ func _scan_player(node: Node) -> Node3D:
 	if node is PlayerController:
 		return node
 	for child in node.get_children():
-		var found := _scan_player(child)
+		var found: Node3D = _scan_player(child)
 		if found:
 			return found
 	return null

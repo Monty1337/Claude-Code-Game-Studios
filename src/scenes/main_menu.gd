@@ -44,6 +44,15 @@ func _ready() -> void:
 	spacer.custom_minimum_size.y = 40
 	vbox.add_child(spacer)
 
+	# Continue button (only if save exists)
+	if SaveManager.save_exists():
+		var continue_btn := Button.new()
+		continue_btn.text = "Weiterspielen"
+		continue_btn.custom_minimum_size.y = 50
+		continue_btn.add_theme_font_size_override("font_size", 22)
+		continue_btn.pressed.connect(_on_continue)
+		vbox.add_child(continue_btn)
+
 	# New Game button
 	var new_game := Button.new()
 	new_game.text = "Neues Spiel"
@@ -61,10 +70,17 @@ func _ready() -> void:
 	vbox.add_child(quit)
 
 
+func _on_continue() -> void:
+	if SaveManager.load_game():
+		var chapter: int = GameState.get_chapter()
+		SceneManager.load_scene(SaveManager.get_chapter_scene(chapter))
+
+
 func _on_new_game() -> void:
 	GameState.reset()
 	InventoryManager.clear()
 	CostumeManager.clear_assignments()
+	SaveManager.delete_save()
 	SceneManager.load_scene("res://scenes/chapter_1.tscn")
 
 

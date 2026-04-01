@@ -27,7 +27,9 @@ func _ready() -> void:
 
 
 func _on_item_used(item_id: StringName, target_id: StringName, _success: bool) -> void:
+
 	for puzzle in puzzles:
+
 		if not _is_available(puzzle):
 			continue
 		if _is_solved(puzzle):
@@ -37,7 +39,9 @@ func _on_item_used(item_id: StringName, target_id: StringName, _success: bool) -
 				continue
 			var step := puzzle.steps[i]
 			if step.step_type == PuzzleStep.StepType.USE_ITEM:
+
 				if step.item_id == item_id and step.target_id == target_id:
+	
 					_complete_step(puzzle, i)
 
 
@@ -55,6 +59,7 @@ func _on_item_picked_up(item_id: StringName, _player: Node) -> void:
 
 
 func _on_flag_set(flag_name: StringName, value: bool) -> void:
+
 	if not value:
 		return
 	for puzzle in puzzles:
@@ -88,6 +93,10 @@ func _complete_step(puzzle: PuzzleResource, step_index: int) -> void:
 
 	state["steps_done"].append(step_index)
 	EventBus.puzzle_step_completed.emit(puzzle.puzzle_id, step_index)
+
+	# Also check if any other steps are retroactively complete
+	# (e.g., a TalkToNPC flag was set earlier but not caught)
+	_check_retroactive_steps(puzzle)
 
 	# Check if all steps are done
 	if state["steps_done"].size() >= puzzle.steps.size():
@@ -134,6 +143,25 @@ func _is_solved(puzzle: PuzzleResource) -> bool:
 func _is_solved_by_id(puzzle_id: StringName) -> bool:
 	var state: Dictionary = _puzzle_states.get(puzzle_id, {})
 	return state.get("solved", false)
+
+
+func _check_retroactive_steps(puzzle: PuzzleResource) -> void:
+	var state: Dictionary = _puzzle_states[puzzle.puzzle_id]
+	for i in puzzle.steps.size():
+		if _is_step_done(puzzle, i):
+			continue
+		var step := puzzle.steps[i]
+		# Check if TalkToNPC flags were already set
+		if step.step_type == PuzzleStep.StepType.TALK_TO_NPC:
+			if step.dialogue_flag != &"" and GameState.get_puzzle_flag(step.dialogue_flag):
+	
+				state["steps_done"].append(i)
+				EventBus.puzzle_step_completed.emit(puzzle.puzzle_id, i)
+		# Check if CollectItem was already picked up
+		if step.step_type == PuzzleStep.StepType.COLLECT_ITEM:
+			if InventoryManager.has_item(step.item_id):
+				state["steps_done"].append(i)
+				EventBus.puzzle_step_completed.emit(puzzle.puzzle_id, i)
 
 
 func _is_step_done(puzzle: PuzzleResource, step_index: int) -> bool:
