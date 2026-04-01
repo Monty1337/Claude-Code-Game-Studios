@@ -60,6 +60,7 @@ func get_chapter_scene(chapter: int) -> String:
 	match chapter:
 		1: return "res://scenes/chapter_1.tscn"
 		2: return "res://scenes/chapter_2.tscn"
+		3: return "res://scenes/chapter_3.tscn"
 		_: return "res://scenes/chapter_1.tscn"
 
 

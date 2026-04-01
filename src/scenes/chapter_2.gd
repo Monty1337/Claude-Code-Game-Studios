@@ -540,9 +540,10 @@ func _on_chapter_completed(_chapter: int) -> void:
 		"KAPITEL 2 GESCHAFFT!\n\n" +
 		"The Brauhaus is brewing again!\n" +
 		"Kölsch flows freely through the streets!\n\n" +
-		"To be continued...",
+		"But the curse still grips the parade route...",
 		0.0
 	)
-	await get_tree().create_timer(6.0).timeout
+	await get_tree().create_timer(5.0).timeout
+	GameState.set_chapter(3)
 	SaveManager.save_game()
-	SceneManager.load_scene("res://scenes/main_menu.tscn")
+	SceneManager.load_scene("res://scenes/chapter_3.tscn")
